@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "GET comments without slug",
+      "method": "GET",
+      "path": "/?post_slug=welcome-to-the-blog",
+      "expectedStatus": 200,
+      "expectedBody": {"comments": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST new comment",
+      "method": "POST",
+      "path": "/",
+      "body": {"post_slug": "welcome-to-the-blog", "author": "Иван", "text": "Отличный пост!"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
