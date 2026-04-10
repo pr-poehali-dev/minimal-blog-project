@@ -1,30 +1,39 @@
-import { useState, useMemo } from "react";
-import { POSTS, CATEGORIES, searchPosts } from "@/data/posts";
+import { useState, useEffect, useMemo } from "react";
+import { fetchPosts, Post } from "@/lib/api";
 import PostCard from "@/components/blog/PostCard";
 import Header from "@/components/blog/Header";
 import Icon from "@/components/ui/icon";
 import { Link } from "react-router-dom";
 
+const CATEGORIES = ["Технологии", "Дизайн", "Жизнь", "Наука", "Без категории"];
+
 export default function BlogHome() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    POSTS.forEach((p) => p.tags.forEach((t) => tags.add(t)));
-    return Array.from(tags);
-  }, []);
-
-  const filtered = useMemo(() => {
-    let posts = query ? searchPosts(query) : POSTS;
-    if (activeCategory) posts = posts.filter((p) => p.category === activeCategory);
-    if (activeTag) posts = posts.filter((p) => p.tags.includes(activeTag));
-    return posts;
+  useEffect(() => {
+    setLoading(true);
+    fetchPosts({
+      search: query || undefined,
+      category: activeCategory || undefined,
+      tag: activeTag || undefined,
+    })
+      .then(setPosts)
+      .finally(() => setLoading(false));
   }, [query, activeCategory, activeTag]);
 
-  const featured = filtered[0];
-  const rest = filtered.slice(1);
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    posts.forEach((p) => p.tags.forEach((t) => t && tags.add(t)));
+    return Array.from(tags);
+  }, [posts]);
+
+  const featured = posts[0];
+  const rest = posts.slice(1);
+  const hasFilters = query || activeCategory || activeTag;
 
   function clearFilters() {
     setQuery("");
@@ -32,26 +41,20 @@ export default function BlogHome() {
     setActiveTag(null);
   }
 
-  const hasFilters = query || activeCategory || activeTag;
-
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
       <main className="max-w-3xl mx-auto px-6 py-12">
-        {/* Hero */}
         {!hasFilters && (
           <div className="mb-12">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-stone-900 mb-3 leading-tight">
               Мысли<span className="text-amber-500">.</span>
             </h1>
-            <p className="text-stone-500 text-lg">
-              Личный блог о технологиях, дизайне и жизни.
-            </p>
+            <p className="text-stone-500 text-lg">Личный блог о технологиях, дизайне и жизни.</p>
           </div>
         )}
 
-        {/* Search */}
         <div className="relative mb-6">
           <Icon name="Search" size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
@@ -62,24 +65,16 @@ export default function BlogHome() {
             className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
           />
           {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-            >
+            <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
               <Icon name="X" size={15} />
             </button>
           )}
         </div>
 
-        {/* Categories */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-6">
           <button
             onClick={() => setActiveCategory(null)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
-              !activeCategory
-                ? "bg-stone-900 text-white border-stone-900"
-                : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
-            }`}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${!activeCategory ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"}`}
           >
             Все
           </button>
@@ -87,29 +82,20 @@ export default function BlogHome() {
             <button
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
-                activeCategory === cat
-                  ? "bg-amber-600 text-white border-amber-600"
-                  : "bg-white text-stone-600 border-stone-200 hover:border-amber-300"
-              }`}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${activeCategory === cat ? "bg-amber-600 text-white border-amber-600" : "bg-white text-stone-600 border-stone-200 hover:border-amber-300"}`}
             >
               {cat}
             </button>
           ))}
         </div>
 
-        {/* Tags */}
-        {!query && (
+        {allTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-10">
             {allTags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                className={`text-xs px-2.5 py-1 rounded-lg transition-all ${
-                  activeTag === tag
-                    ? "bg-amber-100 text-amber-700 font-medium"
-                    : "text-stone-400 hover:text-stone-600 hover:bg-stone-50"
-                }`}
+                className={`text-xs px-2.5 py-1 rounded-lg transition-all ${activeTag === tag ? "bg-amber-100 text-amber-700 font-medium" : "text-stone-400 hover:text-stone-600 hover:bg-stone-50"}`}
               >
                 #{tag}
               </button>
@@ -117,11 +103,10 @@ export default function BlogHome() {
           </div>
         )}
 
-        {/* Results count */}
         {hasFilters && (
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-stone-500">
-              Найдено: <span className="font-semibold text-stone-900">{filtered.length}</span>
+              Найдено: <span className="font-semibold text-stone-900">{posts.length}</span>
             </p>
             <button onClick={clearFilters} className="text-xs text-amber-600 hover:text-amber-800 flex items-center gap-1">
               <Icon name="X" size={12} />
@@ -130,20 +115,28 @@ export default function BlogHome() {
           </div>
         )}
 
-        {/* Posts */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col gap-5 mt-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-stone-100 p-6 animate-pulse">
+                <div className="h-3 bg-stone-100 rounded w-24 mb-4" />
+                <div className="h-5 bg-stone-100 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-stone-100 rounded w-full mb-1" />
+                <div className="h-3 bg-stone-100 rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
           <div className="text-center py-16">
             <Icon name="SearchX" size={40} className="mx-auto text-stone-300 mb-4" />
-            <p className="text-stone-400 text-sm">Ничего не найдено. Попробуйте изменить запрос.</p>
+            <p className="text-stone-400 text-sm">Ничего не найдено.</p>
           </div>
         ) : (
           <>
             {featured && <PostCard post={featured} featured />}
             {rest.length > 0 && (
               <div className="mt-8">
-                {rest.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
+                {rest.map((post) => <PostCard key={post.id} post={post} />)}
               </div>
             )}
           </>
@@ -156,7 +149,12 @@ export default function BlogHome() {
           <div className="flex items-center gap-4">
             <Link to="/about" className="hover:text-stone-600 transition-colors">Об авторе</Link>
             <Link to="/contact" className="hover:text-stone-600 transition-colors">Контакты</Link>
-            <a href="/rss" className="hover:text-amber-600 transition-colors flex items-center gap-1">
+            <a
+              href="https://functions.poehali.dev/39ae11b6-2683-47be-aa96-4a77ce7774be"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-amber-600 transition-colors flex items-center gap-1"
+            >
               <Icon name="Rss" size={12} />
               RSS
             </a>

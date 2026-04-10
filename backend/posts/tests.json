@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "GET all posts returns list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET post by slug",
+      "method": "GET",
+      "path": "/?slug=welcome-to-the-blog",
+      "expectedStatus": 200,
+      "expectedBody": {"post": {"slug": "welcome-to-the-blog"}},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
